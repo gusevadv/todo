@@ -1,91 +1,144 @@
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from './page.module.css'
+'use client'
+import { useState, useEffect } from 'react'
 
-const inter = Inter({ subsets: ['latin'] })
+type Todo = {
+  id: number
+  title: string
+  checked: boolean
+}
 
-export default function Home() {
+const defaultTodos: Todo[] = [
+  { id: 1, title: 'Item1', checked: true },
+  { id: 2, title: 'Item2', checked: true },
+  { id: 3, title: 'Item3', checked: true },
+  { id: 4, title: 'Item4', checked: true },
+  { id: 5, title: 'Item5', checked: true }
+]
+
+let index = (defaultTodos.at(-1)?.id ?? -1) + 1
+
+function getNewTodoItem() {
+  const newTodo: Todo = {
+    id: index,
+    title: `Item${index}`,
+    checked: true
+  }
+  index += 1
+  return newTodo
+}
+
+export default function Page() {
+  const [todos, setTodos] = useState(defaultTodos)
+
+  const handleAddItem = () => {
+    const newTodo = getNewTodoItem()
+    const newTodos = [...todos, newTodo]
+    setTodos(newTodos)
+
+    // setTodos(oldTodos => {
+    //   return [...oldTodos, newtodo]
+    // })
+  }
+
+  const handleUpdateItem = (updatedTodo: Todo) => {
+    const updatedIndex = todos.findIndex((todo) => todo.id === updatedTodo.id)
+    const updatedTodos = [...todos]
+    updatedTodos.splice(updatedIndex, 1, updatedTodo)
+    setTodos(updatedTodos)
+  }
+
+  const handleDeleteItem = (deleteTodo: Todo) => {
+    const deleteIndex = todos.findIndex((todo) => todo.id === deleteTodo.id)
+    const updatedTodos = [...todos]
+    updatedTodos.splice(deleteIndex, 1)
+    setTodos(updatedTodos)
+  }
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <main >
+      <div className="container mx-auto flex flex-col shadow-lg w-96 rounded-2xl bg-white p-5 gap-3">
+        <div className="flex flex-row justify-between gap-6 place-content-center">
+          <div className="flex flex-row gap-2">
+            <div>
+            0/2
+            </div>
+            <div>
+             Shoping List
+            </div>
+          </div>
+          <div >
+            <input className="m-1" type="checkbox" />Completed
+          </div>
         </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-        <div className={styles.thirteen}>
-          <Image src="/thirteen.svg" alt="13" width={40} height={31} priority />
-        </div>
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://beta.nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={inter.className}>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p className={inter.className}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+        <TodoList >
+          {todos.map(todo => <TodoItem key={todo.id} item={todo} onChange={handleUpdateItem} onDelete={handleDeleteItem}/>)}
+        </TodoList>
+        <button className="bg-gray-500 self-end" onClick={handleAddItem}>+ Add an item</button>
       </div>
     </main>
+  )
+}
+
+function TodoList(props: React.PropsWithChildren) {
+  return (
+    <ul className="flex flex-col place-content-center gap-1">
+      {props.children}
+    </ul>
+  )
+}
+
+interface TodoItemProps {
+  item: Todo,
+  onChange: (todo: Todo) => void
+  onDelete: (todo: Todo) => void
+}
+
+function TodoItem(props: TodoItemProps) {
+  const item = props.item
+  const id = item.id
+  const onChange = props.onChange
+  const onDelete = props.onDelete
+  // const [title, setTitle] = useState(item?.title ?? 'Untitled')
+  // const [checked, setChecked] = useState(item?.checked ?? false)
+  const title = item.title
+  const checked = item.checked
+
+  // useEffect(() => {
+  //   const newtodo = {
+  //     id,
+  //     title,
+  //     checked
+  //   }
+  //   console.log(newtodo)
+  // }, [title, checked])
+
+  const handleCheckChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked
+    const newtodo = {
+      id,
+      title,
+      checked
+    }
+    onChange?.(newtodo)
+  }
+
+  const handleTitleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const title = event.target.value
+    const newtodo = {
+      id,
+      title,
+      checked
+    }
+    onChange?.(newtodo)
+  }
+
+  const handleDelete = () => {
+    onDelete?.(item)
+  }
+  return (
+    <li className="flex flex-row p-4 gap-3 group rounded-xl bg-background-color hover:bg-[#ebebeb]">
+      <input type="checkbox" checked={checked} onChange={handleCheckChange}/>
+      <input className="bg-background-color basis-full group-hover:bg-[#ebebeb] outline-none" value={title} onChange={handleTitleChange}/>
+      <button className="invisible group-hover:visible"onClick={handleDelete}>❌</button>
+    </li>
   )
 }
