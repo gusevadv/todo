@@ -1,32 +1,14 @@
 'use client'
 import { useState, useEffect, useReducer, useCallback } from 'react'
+import { Todo } from '@/types'
+import { TodoService } from '@/services/TodoService'
+import TodoInMemoryService from '@/services/TodoInMemoryService'
+import TodoLocalStorageService from '@/services/TodoLocalStorageService'
 
-type Todo = {
-  id: number
-  title: string
-  checked: boolean
-}
+// const storage = localStorage
+// const todoService: TodoService = new TodoLocalStorageService(storage)
 
-const defaultTodos: Todo[] = [
-  { id: 1, title: 'Item1', checked: true },
-  { id: 2, title: 'Item2', checked: true },
-  { id: 3, title: 'Item3', checked: true },
-  { id: 4, title: 'Item4', checked: true },
-  { id: 5, title: 'Item5', checked: true }
-]
-
-let index = (defaultTodos.at(-1)?.id ?? -1) + 1
-let checkedFilter = false
-
-function getNewTodoItem() {
-  const newTodo: Todo = {
-    id: index,
-    title: `Item${index}`,
-    checked: true
-  }
-  index += 1
-  return newTodo
-}
+const todoService: TodoService = new TodoInMemoryService()
 
 function filterTodos(todos: Todo[], completed: boolean): Todo[] {
   const filteredTodos = completed ? todos.filter(todo => todo.checked === true) : todos
@@ -40,6 +22,10 @@ function getCounter(todos: Todo[]): string {
 }
 
 type State = {
+  loading: boolean
+  addLoading: boolean
+  updateLoading: boolean
+  deleteLoading: boolean
   todos: Todo[]
   filteredTodos: Todo[]
   completed: boolean
@@ -47,26 +33,82 @@ type State = {
 }
 
 type Action =
+  | { type: 'GET_TODOS' }
+  | { type: 'GET_TODOS_COMPLETE', payload: { todos: Todo[] } }
+  | { type: 'GET_TODOS_ERROR', payload: { message: string } }
+
   | { type: 'ADD_TODO' }
+  | { type: 'ADD_TODO_COMPLETE', payload: { todo: Todo } }
+  | { type: 'ADD_TODO_ERROR', payload: { message: string } }
+
   | { type: 'UPDATE_TODO', payload: { todo: Todo } }
+  | { type: 'UPDATE_TODO_COMPLETE', payload: { todo: Todo } }
+  | { type: 'UPDATE_TODO_ERROR', payload: { message: string } }
+
   | { type: 'DELETE_TODO', payload: { todo: Todo } }
+  | { type: 'DELETE_TODO_COMPLETE', payload: { todo: Todo }}
+  | { type: 'DELETE_TODO_ERROR', payload: { message: string } }
+
   | { type: 'FILTER_TODOS', payload: { completed: boolean } }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'ADD_TODO': {
-      const newTodo = getNewTodoItem()
-      const newTodos = [...state.todos, newTodo]
+    case 'GET_TODOS': {
+      return {
+        ...state,
+        loading: true
+      }
+    }
+    case 'GET_TODOS_COMPLETE': {
+      const newTodos = action.payload.todos
       const filteredTodos = filterTodos(newTodos, state.completed)
       const counter = getCounter(newTodos)
       return {
         ...state,
+        loading: false,
         todos: newTodos,
         filteredTodos,
         counter
       }
     }
+    case 'GET_TODOS_ERROR': {
+      const message = action.payload.message
+      // TODO: Handle error message
+      console.log(message)
+      return state
+    }
+    case 'ADD_TODO': {
+      return {
+        ...state,
+        addLoading: true
+      }
+    }
+    case 'ADD_TODO_COMPLETE': {
+      const newTodo = action.payload.todo
+      const newTodos = [...state.todos, newTodo]
+      const filteredTodos = filterTodos(newTodos, state.completed)
+      const counter = getCounter(newTodos)
+      return {
+        ...state,
+        addLoading: false,
+        todos: newTodos,
+        filteredTodos,
+        counter
+      }
+    }
+    case 'ADD_TODO_ERROR': {
+      const message = action.payload.message
+      // TODO: Handle error message
+      console.log(message)
+      return state
+    }
     case 'UPDATE_TODO': {
+      return {
+        ...state,
+        updateLoading: true
+      }
+    }
+    case 'UPDATE_TODO_COMPLETE': {
       const updatedTodo = action.payload.todo
       const updatedIndex = state.todos.findIndex((todo) => todo.id === updatedTodo.id)
       const updatedTodos = [...state.todos]
@@ -76,11 +118,24 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         todos: updatedTodos,
+        updateLoading: false,
         filteredTodos,
         counter
       }
     }
+    case 'UPDATE_TODO_ERROR': {
+      const message = action.payload.message
+      // TODO: Handle error message
+      console.log(message)
+      return state
+    }
     case 'DELETE_TODO': {
+      return {
+        ...state,
+        deleteLoading: true
+      }
+    }
+    case 'DELETE_TODO_COMPLETE': {
       const deletedTodo = action.payload.todo
       const deleteIndex = state.todos.findIndex((todo) => todo.id === deletedTodo.id)
       const updatedTodos = [...state.todos]
@@ -90,9 +145,16 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         todos: updatedTodos,
+        deleteLoading: false,
         filteredTodos,
         counter
       }
+    }
+    case 'DELETE_TODO_ERROR': {
+      const message = action.payload.message
+      // TODO: Handle error message
+      console.log(message)
+      return state
     }
     case 'FILTER_TODOS': {
       const completed = action.payload.completed
@@ -110,26 +172,48 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-const initialState: State = {
-  todos: defaultTodos,
-  filteredTodos: filterTodos(defaultTodos, false),
-  completed: false,
-  counter: getCounter(defaultTodos)
+function getInitialState(todos: Todo[]): State {
+  return {
+    loading: false,
+    addLoading: false,
+    updateLoading: false,
+    deleteLoading: false,
+    todos,
+    filteredTodos: filterTodos(todos, false),
+    completed: false,
+    counter: getCounter(todos)
+
+  }
 }
 
 export default function Page() {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(reducer, getInitialState([]))
 
-  const handleAddItem = () => {
+  useEffect(() => {
+    async function getTodos() {
+      dispatch({ type: 'GET_TODOS' })
+      const todos = await todoService.getTodos()
+      dispatch({ type: 'GET_TODOS_COMPLETE', payload: { todos }})
+    }
+    getTodos()
+  }, [])
+
+  const handleAddItem = async () => {
     dispatch({ type: 'ADD_TODO' })
+    const todo = await todoService.createTodo()
+    dispatch({ type: 'ADD_TODO_COMPLETE', payload: { todo }})
   }
 
-  const handleUpdateItem = (todo: Todo) => {
+  const handleUpdateItem = async (todo: Todo) => {
     dispatch({ type: 'UPDATE_TODO', payload: { todo }})
+    const updatedTodo = await todoService.updateTodo(todo)
+    dispatch({ type: 'UPDATE_TODO_COMPLETE', payload: { todo }})
   }
 
-  const handleDeleteItem = (todo: Todo) => {
+  const handleDeleteItem = async (todo: Todo) => {
     dispatch({ type: 'DELETE_TODO', payload: { todo }})
+    const deleteTodo = await todoService.deleteTodo(todo)
+    dispatch({ type: 'DELETE_TODO_COMPLETE', payload: { todo }})
   }
 
   const handleFilterTodo = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,6 +221,21 @@ export default function Page() {
     dispatch({ type: 'FILTER_TODOS', payload: { completed }})
   }
 
+  if (state.addLoading) {
+    return <h1>add loading</h1>
+  }
+
+  if (state.loading) {
+    return <h1>Loading</h1>
+  }
+
+  if (state.updateLoading) {
+    return <h1>update Loading</h1>
+  }
+
+  if (state.deleteLoading) {
+    return <h1>delete Loading</h1>
+  }
   return (
     <main >
       <div className="container mx-auto flex flex-col shadow-lg w-96 rounded-2xl bg-white p-5 gap-3">
