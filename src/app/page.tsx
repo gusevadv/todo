@@ -2,13 +2,11 @@
 import { useState, useEffect, useReducer, useCallback } from 'react'
 import { Todo } from '@/types'
 import { TodoService } from '@/services/TodoService'
-import TodoInMemoryService from '@/services/TodoInMemoryService'
-import TodoLocalStorageService from '@/services/TodoLocalStorageService'
+import TodoStorageService, { Storage, InMemoryStorage } from '@/services/TodoStorageService'
 
-// const storage = localStorage
-// const todoService: TodoService = new TodoLocalStorageService(storage)
-
-const todoService: TodoService = new TodoInMemoryService()
+// const delay = (ms: number): Promise<void> => Promise.resolve()
+const storage: Storage = new InMemoryStorage()
+const todoService: TodoService = new TodoStorageService(storage)
 
 function filterTodos(todos: Todo[], completed: boolean): Todo[] {
   const filteredTodos = completed ? todos.filter(todo => todo.checked === true) : todos
