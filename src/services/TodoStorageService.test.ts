@@ -1,10 +1,12 @@
-import TodoInMemoryService from './TodoInMemoryService'
+import TodoStorageService, { InMemoryStorage} from './TodoStorageService'
 import { TodoService } from './TodoService'
 
 let todoService: TodoService
 
 beforeEach(() => {
-  todoService = new TodoInMemoryService()
+  const delay = (ms: number): Promise<void> => Promise.resolve()
+  const storage = new InMemoryStorage()
+  todoService = new TodoStorageService(storage, delay)
 })
 
 test('Get todos', async () => {

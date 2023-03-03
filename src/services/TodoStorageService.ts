@@ -9,20 +9,32 @@ const defaultTodos: Todo[] = [
   { id: 5, title: 'Item5', checked: true }
 ]
 
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-export interface LocalStorage {
+export interface Storage {
   setItem(key: string, value: string): void
   getItem(key: string): string | null
 }
 
-export default class TodoLocalStorageService implements TodoService {
+export class InMemoryStorage implements Storage {
+  dictionary: { [key: string]: string } = {}
+
+  setItem(key: string, value: string): void {
+    this.dictionary[key] = value
+  }
+
+  getItem(key: string): string | null {
+    return this.dictionary[key]
+  }
+}
+
+export function timeoutDelay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export default class TodoStorageService implements TodoService {
   latestID: number
 
   get todos(): Todo[] {
-    const savedTodos = this.getTodosFromLocalStorage()
+    const savedTodos = this.getTodosFromStorage()
     if (savedTodos.length === 0) {
       return defaultTodos
     }
@@ -30,26 +42,31 @@ export default class TodoLocalStorageService implements TodoService {
   }
 
   set todos(todos: Todo[]) {
-    this.saveTodosToLocalStorage(todos)
+    this.saveTodosToStorage(todos)
   }
 
-  localStorage: LocalStorage
+  storage: Storage
+  delay: (ms: number) => Promise<void>
 
-  constructor(localStorage: LocalStorage) {
-    this.localStorage = localStorage
+  constructor(
+    storage: Storage,
+    delay?: (ms: number) => Promise<void>
+  ) {
+    this.storage = storage
+    this.delay = delay ?? timeoutDelay
     this.latestID = (this.todos.at(-1)?.id ?? 0) + 1
   }
 
-  getTodosFromLocalStorage(): Todo[] {
-    const todosString = this.localStorage.getItem('todos')
+  getTodosFromStorage(): Todo[] {
+    const todosString = this.storage.getItem('todos')
     if (!todosString) { return [] }
     const todos = JSON.parse(todosString)
     return todos
   }
 
-  saveTodosToLocalStorage(todos: Todo[]) {
+  saveTodosToStorage(todos: Todo[]) {
     const todosJSON = JSON.stringify(todos)
-    this.localStorage.setItem('todos', todosJSON)
+    this.storage.setItem('todos', todosJSON)
   }
 
   getNewTodoItem(): Todo {
@@ -63,34 +80,34 @@ export default class TodoLocalStorageService implements TodoService {
   }
 
   async getTodos(): Promise<Todo[]> {
-    await delay(1000)
-    return this.todos
+    await this.delay(1000)
+    return this.todos.map(todo => ({ ...todo }))
   }
 
   async createTodo(): Promise<Todo> {
-    await delay(1000)
+    await this.delay(1000)
     const newTodo = this.getNewTodoItem()
     this.todos = [...this.todos, newTodo]
-    return newTodo
+    return { ...newTodo }
   }
 
   async updateTodo(todo: Todo): Promise<Todo> {
-    await delay(1000)
+    await this.delay(1000)
     const updatedTodo = todo
     const updatedIndex = this.todos.findIndex((todo) => todo.id === updatedTodo.id)
     const updatedTodos = [...this.todos]
     updatedTodos.splice(updatedIndex, 1, updatedTodo)
     this.todos = updatedTodos
-    return updatedTodo
+    return { ...updatedTodo }
   }
 
   async deleteTodo(todo: Todo): Promise<Todo> {
-    await delay(1000)
+    await this.delay(1000)
     const deletedTodo = todo
     const deleteIndex = this.todos.findIndex((todo) => todo.id === deletedTodo.id)
     const updatedTodos = [...this.todos]
     updatedTodos.splice(deleteIndex, 1)
     this.todos = updatedTodos
-    return deletedTodo
+    return { ...deletedTodo }
   }
 }
