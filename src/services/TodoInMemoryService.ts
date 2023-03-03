@@ -29,14 +29,14 @@ export default class TodoInMemoryService implements TodoService {
 
   async getTodos(): Promise<Todo[]> {
     await delay(1000)
-    return this.todos
+    return this.todos.map(todo => ({ ...todo }))
   }
 
   async createTodo(): Promise<Todo> {
     await delay(1000)
     const newTodo = this.getNewTodoItem()
     this.todos = [...this.todos, newTodo]
-    return newTodo
+    return { ...newTodo }
   }
 
   async updateTodo(todo: Todo): Promise<Todo> {
@@ -46,7 +46,7 @@ export default class TodoInMemoryService implements TodoService {
     const updatedTodos = [...this.todos]
     updatedTodos.splice(updatedIndex, 1, updatedTodo)
     this.todos = updatedTodos
-    return updatedTodo
+    return { ...updatedTodo }
   }
 
   async deleteTodo(todo: Todo): Promise<Todo> {
@@ -56,6 +56,6 @@ export default class TodoInMemoryService implements TodoService {
     const updatedTodos = [...this.todos]
     updatedTodos.splice(deleteIndex, 1)
     this.todos = updatedTodos
-    return deletedTodo
+    return { ...deletedTodo }
   }
 }

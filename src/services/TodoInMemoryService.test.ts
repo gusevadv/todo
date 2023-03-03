@@ -22,8 +22,12 @@ test('Get new todo', async () => {
   expect(lastTodo?.id).toBe(newtodo.id)
 })
 
-test.todo('Update todo', () => {
-
+test('Update todo', async () => {
+  const todosBefore = await todoService.getTodos()
+  let todoToUpdate = todosBefore[0]
+  todoToUpdate.title = '123'
+  let updatedTodo = await todoService.updateTodo(todoToUpdate)
+  expect(todoToUpdate).toStrictEqual(updatedTodo)
 })
 
 test('Delete todo', async () => {
